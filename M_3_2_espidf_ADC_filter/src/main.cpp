@@ -1,45 +1,36 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-// #include "esp_adc/adc_oneshot.h"
-// #include "esp_adc/adc_cali.h"
-// #include "esp_adc/adc_cali_scheme.h"
-// #include "esp_log.h"
-// #include "esp_err.h"
 #include "esp_random.h"
-
 #include "filters.h"
-#include "adc_driver.h"
-#include "adc_calibration.h"
+#include "adc.h"
 
-constexpr float VREF = 3.1f;
-constexpr float ADC_RESOLUTION = 4095.0f;
+constexpr int VREF_mV = 3100;        // Напруга опорного джерела в мілівольтах
+constexpr int ADC_RESOLUTION = 4095; // Роздільна здатність ADC
 
 constexpr int SIZE = 4; // Розмір вікна ковзного середнього
 
 constexpr float ALPHA = 0.6f; // коефіцієнт згладжування
 
-int getVoltage(int adcValue)
+static int getVoltage(int adcValue)
 {
-    return static_cast<int>((static_cast<float>(adcValue) / ADC_RESOLUTION) * VREF * 1000.0f);
+    return (adcValue * VREF_mV) / ADC_RESOLUTION;
 }
 
 extern "C" void app_main(void)
 {
-    //-------------MA and EMA Init---------------//
-    static MovingAvg MAFilter;
+    //-------------MA and EMA Init---------------
+    MovingAvg MAFilter;
     static ExpMovingAverage EMAFilter;
 
     initMovingAverage(&MAFilter, SIZE);
     initEMAFilter(&EMAFilter, ALPHA);
 
-    //-------------ADC1 Init---------------//
+    //-------------ADC1 Init---------------
     adc_oneshot_unit_handle_t adc1_handle; // Дескриптор апаратного модуля ADC 1
     adc_init(&adc1_handle);
 
-    //-------------ADC1 Calibration Init---------------//
-
+    //-------------ADC1 Calibration Init---------------
     adc_cali_handle_t cali_handle = NULL; // Дескриптор калібрування
-
     adc_calibration_init(&cali_handle);
 
     while (1)
@@ -60,8 +51,7 @@ extern "C" void app_main(void)
 
         ESP_LOGI("ADC", "Raw: %d, Voltage: %d mV, Voltage_calibrated: %d mV", adc_raw, voltage, voltage_calibrated);
 
-        // Сигнал + шуму
-
+        // Сигнал + шум
         voltage_calibrated_noise = voltage_calibrated + static_cast<int>(esp_random() % 201) - 100;
 
         // Сигнал після фільтрації ковзним середнім MA

@@ -4,11 +4,11 @@
 
 constexpr int WINDOW_SIZE = 10;
 
-struct ExpMovingAverage
+typedef struct
 {
 	int y_prev;
 	float alpha;
-};
+} ExpMovingAverage;
 
 typedef struct
 {
