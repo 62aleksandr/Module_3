@@ -6,7 +6,7 @@
 #include "esp_log.h"
 #include "esp_err.h"
 
-constexpr float VREF = 3.3f;
+constexpr float VREF = 3.1f;
 constexpr float ADC_RESOLUTION = 4095.0f;
 
 int getVoltage(int adcValue)
@@ -16,7 +16,7 @@ int getVoltage(int adcValue)
 
 extern "C" void app_main(void)
 {
-    // 1. Конфігурація модуля (Unit)
+    //-------------ADC1 Init---------------//
     adc_oneshot_unit_handle_t adc1_handle; // Дескриптор апаратного модуля ADC 1
 
     adc_oneshot_unit_init_cfg_t init_config1 = {
@@ -27,7 +27,7 @@ extern "C" void app_main(void)
 
     ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config1, &adc1_handle)); // Створення дескриптора ADC 1
 
-    // 2. Конфігурація каналу
+    //-------------ADC1 Config---------------//
     adc_oneshot_chan_cfg_t config = {
         .atten = ADC_ATTEN_DB_12,         // Діапазон до ~3.1В
         .bitwidth = ADC_BITWIDTH_DEFAULT, // Зазвичай 12 біт
@@ -35,7 +35,7 @@ extern "C" void app_main(void)
 
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_3, &config)); // Налаштування каналу 3 ADC 1
 
-    // 3. (Опціонально) Налаштування калібрування для отримання мВ
+    //-------------ADC1 Calibration Init---------------//
     adc_cali_handle_t cali_handle = NULL; // Дескриптор калібрування
 
     adc_cali_curve_fitting_config_t cali_config = {
@@ -47,6 +47,8 @@ extern "C" void app_main(void)
 
     ESP_ERROR_CHECK(adc_cali_create_scheme_curve_fitting(&cali_config, &cali_handle)); // Створення дескриптора калібрування
 
+    // adc_cali_delete_scheme_curve_fitting(cali_handle)); // Видалення попереднього дескриптора калібрування, якщо він існує
+
     while (1)
     {
         int adc_raw;
@@ -56,9 +58,10 @@ extern "C" void app_main(void)
         // Зчитування сирого значення (0-4095)
         ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, ADC_CHANNEL_3, &adc_raw));
 
+        // Перерахунок у мілівольти без калібрування
         voltage = getVoltage(adc_raw);
 
-        // Перерахунок у мілівольти (якщо калібрування успішне)
+        // Перерахунок у мілівольти з калібруванням
         ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, adc_raw, &voltage_calibrated));
 
         ESP_LOGI("ADC", "Raw: %d, Voltage: %d mV, Voltage_calibrated: %d mV", adc_raw, voltage, voltage_calibrated);
