@@ -19,10 +19,10 @@ static int getVoltage(int adcValue)
 extern "C" void app_main(void)
 {
     //-------------MA and EMA Init---------------
-    MovingAvg MAFilter;
-    static ExpMovingAverage EMAFilter;
-
+    static MovingAvg MAFilter;
     initMovingAverage(&MAFilter, SIZE);
+
+    static ExpMovingAverage EMAFilter;
     initEMAFilter(&EMAFilter, ALPHA);
 
     //-------------ADC1 Init---------------
