@@ -1,71 +1,73 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "driver/ledc.h"
 #include "adc.h"
+#include "timer.h"
 
-constexpr int LED_PIN = 16;
-constexpr ledc_timer_t LEDC_TIMER = LEDC_TIMER_0;
-constexpr ledc_channel_t PWM_CHANNEL = LEDC_CHANNEL_7;
-constexpr int LEDC_FREQUENCY = 5000;                            // 1 kHz
-constexpr ledc_timer_bit_t LEDC_RESOLUTION = LEDC_TIMER_10_BIT; // 10-bit (0-1023)
+constexpr int LED_PIN16 = 16;
+constexpr int LED_PIN18 = 18;
+constexpr int FREQ_5KHZ = 5000;
+constexpr int FREQ_1KHZ = 1000;
+constexpr uint8_t channel_count = 2;
+;
 
 extern "C" void app_main(void)
 {
-    //-------------ADC1 Init---------------
-    adc_oneshot_unit_handle_t adc1_handle; // Дескриптор апаратного модуля ADC 1
-    adc_init(&adc1_handle);
+    //-------------ADC1 Init + Calibration ---------------
+    adc_oneshot_unit_handle_t adc_handle;                   // Дескриптор апаратного модуля ADC 1
+    adc_cali_handle_t cali_handles[channel_count] = {NULL}; // Дескриптор калібрування
+    adc_channel_t channels[channel_count] = {ADC_CHANNEL_3, ADC_CHANNEL_4};
 
-    //-------------ADC1 Calibration Init---------------
-    adc_cali_handle_t cali_handle = NULL; // Дескриптор калібрування
-    adc_calibration_init(&cali_handle);
+    adc_init_conf adc1_param = {
+        .unit_id = ADC_UNIT_1,
+        .bitwidth = ADC_BITWIDTH_12,
+        .channels = channels,
+        .channel_count = channel_count,
+        .cali_handles = cali_handles};
 
-    //-------------Timer LED Init---------------
-    // Налаштування таймера
-    ledc_timer_config_t timer_config = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,  // Режим швидкостий/повільний таймер
-        .duty_resolution = LEDC_RESOLUTION, // Роздільна здатність ШІМ
-        .timer_num = LEDC_TIMER,            // Номер таймера LEDC
-        .freq_hz = LEDC_FREQUENCY,          // Частота сигналу ШІМ (Гц)
-        .clk_cfg = LEDC_AUTO_CLK,           // Автоматичний вибір джерела CLK
-        .deconfigure = false                // Не виконувати деініціалізацію таймера
-    };
+    adc_init(&adc_handle, &adc1_param);
 
-    ledc_timer_config(&timer_config);
+    //-------------Timer1 LED Init---------------
+    timer_parameters timer1_param = {
+        .gpio_num = LED_PIN16,
+        .timer_num = LEDC_TIMER_0,
+        .channel = LEDC_CHANNEL_0,
+        .freq_hz = FREQ_5KHZ,
+        .duty_resolution = LEDC_TIMER_10_BIT};
 
-    // Налаштування каналу
-    ledc_channel_config_t channel_config = {
-        .gpio_num = LED_PIN,                          // Номер GPIO для виходу ШІМ
-        .speed_mode = LEDC_LOW_SPEED_MODE,            // Режим швидкості LEDC
-        .channel = PWM_CHANNEL,                       // Номер каналу ШІМ
-        .intr_type = LEDC_INTR_DISABLE,               // Вимкнення переривань LEDC
-        .timer_sel = LEDC_TIMER,                      // Таймер, прив'язаний до каналу
-        .duty = 0,                                    // Початкове значення заповнення ШІМ
-        .hpoint = 0,                                  // Початкова точка формування імп
-        .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD, // Режим роботи у сні
-        .flags = 0,                                   // Додаткові параметри
-        .deconfigure = false};                        // Не деініціалізувати канал
+    pwm_init(&timer1_param);
 
-    ledc_channel_config(&channel_config);
+    //-------------Timer2 LED Init---------------
+    static timer_parameters timer2_param = {
+        .gpio_num = LED_PIN18,
+        .timer_num = LEDC_TIMER_0,
+        .channel = LEDC_CHANNEL_1,
+        .freq_hz = FREQ_1KHZ,
+        .duty_resolution = LEDC_TIMER_10_BIT};
+
+    pwm_init(&timer2_param);
 
     while (1)
     {
-        int adc_raw;
+        int adc1_raw;
+        int adc2_raw;
         int voltage_calibrated;
 
         // Зчитування сирого значення (0-4095)
-        ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, ADC_CHANNEL_3, &adc_raw));
+        ESP_ERROR_CHECK(adc_oneshot_read(adc_handle, ADC_CHANNEL_3, &adc1_raw));
+        ESP_ERROR_CHECK(adc_oneshot_read(adc_handle, ADC_CHANNEL_4, &adc2_raw));
 
         // Перерахунок у мілівольти з калібруванням
-        ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, adc_raw, &voltage_calibrated));
+        // ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali1_handle, adc1_raw, &voltage_calibrated));
 
-        ESP_LOGI("ADC", "Raw: %d, Voltage_calibrated: %d mV", adc_raw, voltage_calibrated);
+        // ESP_LOGI("ADC", "Raw: %d, Voltage_calibrated: %d mV", adc1_raw, voltage_calibrated);
 
         // Маштабуємо до duty cycle (0-1023)
-        int dutyCycle = adc_raw / 4;
+        int dutyCycle1 = adc1_raw / 4;
+        int dutyCycle2 = adc2_raw / 4;
 
-        ledc_set_duty(LEDC_LOW_SPEED_MODE, PWM_CHANNEL, dutyCycle);
-        ledc_update_duty(LEDC_LOW_SPEED_MODE, PWM_CHANNEL);
+        pwm_set_duty(dutyCycle1, timer1_param.channel);
+        pwm_set_duty(dutyCycle2, timer2_param.channel);
 
         vTaskDelay(pdMS_TO_TICKS(100));
     }
