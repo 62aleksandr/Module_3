@@ -9,7 +9,7 @@ typedef struct
 	ledc_channel_t channel;
 	uint32_t freq_hz;
 	ledc_timer_bit_t duty_resolution;
-} timer_parameters;
+} pwm_context;
 
-void pwm_init(timer_parameters *timer_param);
-void pwm_set_duty(int duty, ledc_channel_t channel);
+void pwm_init(pwm_context *timer_param);
+void pwm_set_duty(pwm_context *timer_param, int duty);

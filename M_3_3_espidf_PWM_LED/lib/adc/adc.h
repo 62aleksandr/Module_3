@@ -12,6 +12,6 @@ typedef struct
 	uint8_t channel_count;
 	adc_cali_handle_t *cali_handles;
 
-} adc_init_conf;
+} adc_context;
 
-void adc_init(adc_oneshot_unit_handle_t *adc_handle, adc_init_conf *adc_init);
+void adc_init(adc_oneshot_unit_handle_t *adc_handle, adc_context *adc_init);
