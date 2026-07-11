@@ -60,7 +60,7 @@ extern "C" void app_main(void)
 
         for (uint8_t i = 0; i < channel_count; i++)
         {
-            pwm_set_duty(pwm_ctx[i], raw[i]);
+            ESP_ERROR_CHECK(pwm_set_duty(pwm_ctx[i], raw[i]));
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));

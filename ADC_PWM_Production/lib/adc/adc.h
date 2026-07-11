@@ -16,7 +16,6 @@ typedef struct
 	bool initialized;
 } adc_context;
 
-// void adc_init(adc_oneshot_unit_handle_t *adc_handle, adc_context *adc_init);
 esp_err_t adc_init(adc_context *ctx);
 esp_err_t adc_read_all_voltage_mv(const adc_context *ctx, int *raw, int *voltage_mv);
 esp_err_t adc_deinit(adc_context *ctx);
