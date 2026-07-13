@@ -83,7 +83,7 @@ esp_err_t pwm_deinit(pwm_context *ctx)
 	// Зупинка PWM сигналу на заданому каналі
 	esp_err_t first_err = ledc_stop(ctx->speed_mode, ctx->channel, 0);
 
-	ledc_timer_config_t timer_config = {}; // ???????
+	ledc_timer_config_t timer_config = {};
 	timer_config.speed_mode = ctx->speed_mode;
 	timer_config.timer_num = ctx->timer_num;
 	timer_config.deconfigure = true;

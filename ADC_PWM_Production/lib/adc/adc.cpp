@@ -8,10 +8,10 @@ static esp_err_t adc_release_del_cali(adc_context *ctx)
 	// Перевірка контексту та масиву калібрування
 	if (ctx == NULL || ctx->cali_handles == NULL)
 	{
-		return ESP_OK;
+		return ESP_ERR_NOT_FOUND;
 	}
 
-	esp_err_t first_err = ESP_OK; // ????
+	esp_err_t first_err = ESP_OK;
 
 	// Перебір усіх ADC каналів
 	for (uint8_t i = 0; i < ctx->channel_count; i++)
@@ -143,7 +143,7 @@ esp_err_t adc_read_all_voltage_mv(const adc_context *ctx, int *raw, int *voltage
 
 //------------- Деініціалізації ADC ---------------
 // Видалення калібрування + видалення ADC unit + очищення handle
-esp_err_t adc_deinit(adc_context *ctx) // ???????
+esp_err_t adc_deinit(adc_context *ctx)
 {
 	// Перевірка вказівника на структуру контексту ADC
 	if (ctx == NULL)
@@ -165,7 +165,7 @@ esp_err_t adc_deinit(adc_context *ctx) // ???????
 
 	// Видалення ADC unit
 	esp_err_t err = adc_oneshot_del_unit(ctx->adc_handle);
-	if (first_err == ESP_OK && err != ESP_OK) // ???????
+	if (first_err == ESP_OK && err != ESP_OK)
 	{
 		first_err = err;
 	}
@@ -175,5 +175,5 @@ esp_err_t adc_deinit(adc_context *ctx) // ???????
 	// Зміна стану ADC:
 	ctx->initialized = false;
 
-	return first_err; // ??????
+	return first_err;
 }
