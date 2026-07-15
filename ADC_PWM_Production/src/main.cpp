@@ -4,8 +4,8 @@
 #include "adc.h"
 #include "timer.h"
 
-constexpr uint8_t LED_PIN16 = 16;
-constexpr uint8_t LED_PIN18 = 18;
+const gpio_num_t GPIO_16 = GPIO_NUM_16;
+const gpio_num_t GPIO_18 = GPIO_NUM_18;
 constexpr uint8_t channel_count = 2;
 constexpr uint16_t FREQ_5KHZ = 5000;
 constexpr uint16_t FREQ_1KHZ = 1000;
@@ -28,7 +28,7 @@ extern "C" void app_main(void)
 
     //-------------Timer1 LED Init---------------
     pwm_context pwm1_ctx = {};
-    pwm1_ctx.gpio_num = LED_PIN16;
+    pwm1_ctx.gpio_num = GPIO_16;
     pwm1_ctx.timer_num = LEDC_TIMER_0;
     pwm1_ctx.channel = LEDC_CHANNEL_0;
     pwm1_ctx.freq_hz = FREQ_5KHZ;
@@ -40,7 +40,7 @@ extern "C" void app_main(void)
 
     //-------------Timer2 LED Init---------------
     pwm_context pwm2_ctx = {};
-    pwm2_ctx.gpio_num = LED_PIN18;
+    pwm2_ctx.gpio_num = GPIO_18;
     pwm2_ctx.timer_num = LEDC_TIMER_1;
     pwm2_ctx.channel = LEDC_CHANNEL_1;
     pwm2_ctx.freq_hz = FREQ_50HZ;

@@ -3,12 +3,15 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 #include "sdkconfig.h"
+#include "esp_log.h"
 
 // Define the GPIO pin for the LED (GPIO 2 is common for onboard LEDs)
 #define BLINK_GPIO 16
+static const char *TAG = "ESP_LOG";
 
 void app_main(void)
 {
+	// esp_log_level_set("*", ESP_LOG_INFO);
 	// Configure the GPIO pin
 	// gpio_reset_pin(BLINK_GPIO);
 	// gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
@@ -27,11 +30,13 @@ void app_main(void)
 	{
 		// Turn LED ON
 		printf("LED ON\n");
+		ESP_LOGI(TAG, "LED ON\n");
 		gpio_set_level(BLINK_GPIO, 1);
 		vTaskDelay(1000 / portTICK_PERIOD_MS); // Delay 1 second
 
 		// Turn LED OFF
 		printf("LED OFF\n");
+		ESP_LOGI(TAG, "LED OFF\n");
 		gpio_set_level(BLINK_GPIO, 0);
 		vTaskDelay(1000 / portTICK_PERIOD_MS); // Delay 1 second
 	}
