@@ -62,6 +62,8 @@ extern "C" void app_main()
 	btns[0].debounceDelay = DEBOUNCE_DELAY;
 	btns[0].longPressTime = LONG_PRESS_TIME;
 	btns[0].repeatInterval = REPEAT_INTERVAL;
+	btns[0].lastPinState = gpio_get_level(BUTTON_15);
+	btns[0].pinState = (btns[0].lastPinState == 0) ? PRESSED : RELEASED;
 	btns[0].initialized = true;
 
 	int current_val = 0;
@@ -81,11 +83,15 @@ extern "C" void app_main()
 		// Зчитуємо стан кнопки та керуємо LED
 		for (uint8_t i = 0; i < BUTTONS_COUNT; i++)
 		{
-			if (deb_get_btn_status(&btns[i]) == PRESSED)
+			ButtonEvent event = deb_get_btn_event(&btns[i]);
+			ButtonState status = deb_get_btn_status(&btns[i]);
+
+			if (event == LONG_PRESS_EVENT ||
+				event == CLICK_EVENT)
 			{
 				gpio_set_level(LED_4, 1);
 			}
-			else
+			else if (status == RELEASED)
 			{
 				gpio_set_level(LED_4, 0);
 			}
