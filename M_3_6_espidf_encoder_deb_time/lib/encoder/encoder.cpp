@@ -16,8 +16,11 @@ esp_err_t enc_init(enc_context *ctx)
 		return ESP_ERR_INVALID_STATE;
 	}
 
-	// Створення unit PCNT
 	pcnt_unit_config_t unit_config = {};
+	pcnt_chan_config_t chan_a_config = {};
+	pcnt_chan_config_t chan_b_config = {};
+
+	// Створення unit PCNT
 	unit_config.low_limit = ctx->low_limit;	  // Нижня межа лічильника енкодера
 	unit_config.high_limit = ctx->high_limit; // Верхня межа лічильника енкодера
 	unit_config.intr_priority = 0;			  // Пріоритет переривання за замов.
@@ -37,12 +40,11 @@ esp_err_t enc_init(enc_context *ctx)
 	err = pcnt_unit_set_glitch_filter(ctx->enc_handle, &filter_config);
 	if (err != ESP_OK)
 	{
-		return err;
+		goto fail_unit;
 	}
 
 	// Налаштування каналу енкодера A
 	// Створення та ініціалізація структури конфігурації каналу PCNT
-	pcnt_chan_config_t chan_a_config = {};
 	chan_a_config.edge_gpio_num = ctx->gpio_num_a;	// Вибір GPIO для (канал A)
 	chan_a_config.level_gpio_num = ctx->gpio_num_b; // Вибір GPIO для (канал В)
 	chan_a_config.flags.invert_edge_input = 0;		// Без інверсії сигналу A
@@ -54,10 +56,9 @@ esp_err_t enc_init(enc_context *ctx)
 	err = pcnt_new_channel(ctx->enc_handle, &chan_a_config, &ctx->chan_a_handle);
 	if (err != ESP_OK)
 	{
-		return err;
+		goto fail_unit;
 	}
 
-	pcnt_chan_config_t chan_b_config = {};
 	chan_b_config.edge_gpio_num = ctx->gpio_num_b;	// Вибір GPIO для (канал В)
 	chan_b_config.level_gpio_num = ctx->gpio_num_a; // Вибір GPIO для (канал A)
 	chan_b_config.flags.invert_edge_input = 0;		// Без інверсії сигналу A
@@ -69,7 +70,7 @@ esp_err_t enc_init(enc_context *ctx)
 	err = pcnt_new_channel(ctx->enc_handle, &chan_b_config, &ctx->chan_b_handle);
 	if (err != ESP_OK)
 	{
-		return err;
+		goto fail_chan_a;
 	}
 
 	// Квадратурна логіка
@@ -79,7 +80,7 @@ esp_err_t enc_init(enc_context *ctx)
 									   PCNT_CHANNEL_EDGE_ACTION_INCREASE);
 	if (err != ESP_OK)
 	{
-		return err;
+		goto fail_chan_b;
 	}
 	// Канал A: при B=1 зберігає базову логіку фронтів, а при B=0 — інвертує
 	err = pcnt_channel_set_level_action(ctx->chan_a_handle,
@@ -87,7 +88,7 @@ esp_err_t enc_init(enc_context *ctx)
 										PCNT_CHANNEL_LEVEL_ACTION_INVERSE);
 	if (err != ESP_OK)
 	{
-		return err;
+		goto fail_chan_b;
 	}
 	// Канал B: при A=1 наростаючий фронт (0->1) робить +1, а спадаючий (1->0) робить -1
 	err = pcnt_channel_set_edge_action(ctx->chan_b_handle,
@@ -95,7 +96,7 @@ esp_err_t enc_init(enc_context *ctx)
 									   PCNT_CHANNEL_EDGE_ACTION_DECREASE);
 	if (err != ESP_OK)
 	{
-		return err;
+		goto fail_chan_b;
 	}
 	// Канал B: при A=1 зберігає базову логіку фронтів, а при A=0 — інвертує
 	err = pcnt_channel_set_level_action(ctx->chan_b_handle,
@@ -103,29 +104,46 @@ esp_err_t enc_init(enc_context *ctx)
 										PCNT_CHANNEL_LEVEL_ACTION_INVERSE);
 	if (err != ESP_OK)
 	{
-		return err;
+		goto fail_chan_b;
 	}
 
 	err = pcnt_unit_enable(ctx->enc_handle); // Активує) апаратний блок PCNT
 	if (err != ESP_OK)
 	{
-		return err;
+		goto fail_chan_b;
 	}
 
 	err = pcnt_unit_clear_count(ctx->enc_handle); // Обнуляє значення PCNT
 	if (err != ESP_OK)
 	{
-		return err;
+		goto fail_disable;
 	}
 
 	err = pcnt_unit_start(ctx->enc_handle); // Запускає PCNT
 	if (err != ESP_OK)
 	{
-		return err;
+		goto fail_disable;
 	}
 
 	ctx->initialized = true;
 	return ESP_OK;
+
+fail_disable:
+	(void)pcnt_unit_disable(ctx->enc_handle);
+
+fail_chan_b:
+	(void)pcnt_del_channel(ctx->chan_b_handle);
+	ctx->chan_b_handle = NULL;
+
+fail_chan_a:
+	(void)pcnt_del_channel(ctx->chan_a_handle);
+	ctx->chan_a_handle = NULL;
+
+fail_unit:
+	(void)pcnt_del_unit(ctx->enc_handle);
+	ctx->enc_handle = NULL;
+	ctx->initialized = false;
+	return err;
 }
 
 // Считування поточного значення PCNT
